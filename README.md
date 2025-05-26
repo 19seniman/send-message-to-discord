@@ -12,7 +12,7 @@
 
 7. Auto Reply Message
 
-8. Auto send message with file `pesan.txt`
+8. Auto send message with file `tersuratkan.txt`
 
 9. Auto read new chat in server
 
