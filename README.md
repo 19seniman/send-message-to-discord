@@ -1,12 +1,3 @@
-# BOT PUSH DISCORD x GEMINI AI
-## Creator : SHARE IT HUB
-
-## TELEGRAM CHANNEL : [ SHARE IT HUB](https://t.me/SHAREITHUB_COM)
-
-## YOUTUBE CHANNEL : [ SHARE IT HUB](https://youtube.com/@shareithub_com)
-
-## TUTORIAL VIDEO : https://youtu.be/bodHaUgROlo
-
 ## FEATURE :
 
 1. Multi accounts
@@ -26,30 +17,22 @@
 9. Auto read new chat in server
 
 
-# HOW TO USE ?
-
-Install Python3 :
+###Git clone 
 ```
-sudo apt install python3
-sudo apt install python3-pip
-sudo apt install python3-venv
-sudo apt install git
-sudo apt install screen
-```
-Git clone bot discord , go to folder & Install module using venv :
-```
-git clone https://github.com/shareithub/discord-bot.git
-cd discord-bot
-python3 -m venv shareithub
-source shareithub/bin/activate
-pip install -r requirements.txt
+git clone https://github.com/19seniman/send-message-to-discord.git
+cd send-message-to-discord
+python3 -m venv https://github.com/19seniman/send-message-to-discord.git
+source https://github.com/19seniman/send-message-to-discord.git/bin/activate
+pip3 install -r requirements.txt
 ```
 Edit file `.env` copy & paste your Gemini API & Discord token :
 ```
 nano .env
 ```
-
-## DONE. U CAN RUN BOT `python3 bot.py` 
+Run Scrpt
+```
+python3 chat.py
+```
 
 
 # Copy & Paste in console browser to get TOKEN DISCORD :
