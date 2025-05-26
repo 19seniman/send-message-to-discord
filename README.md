@@ -35,7 +35,7 @@ Run Scrpt
 python3 chat.py
 ```
 
-### get gemini apikey
+### get gemini apikey open your browser
 ```
 https://ai.google.dev/gemini-api/docs/api-key
 ```
