@@ -1,3 +1,4 @@
+import shareithub
 import json
 import threading
 import time
@@ -5,6 +6,7 @@ import os
 import random
 import re
 import requests
+from shareithub import shareithub
 from dotenv import load_dotenv
 from datetime import datetime
 from colorama import init, Fore, Style
@@ -21,12 +23,13 @@ else:
         raise ValueError("Tidak ada Discord token yang ditemukan! Harap atur DISCORD_TOKENS atau DISCORD_TOKEN di .env.")
     discord_tokens = [discord_token]
 
-# Ganti GOOGLE_API_KEYS dengan DEEPSEEK_API_KEY
-deepseek_api_key = os.getenv('DEEPSEEK_API_KEY')
-if not deepseek_api_key:
-    raise ValueError("Tidak ada DeepSeek API Key yang ditemukan! Harap atur DEEPSEEK_API_KEY di .env.")
+google_api_keys = os.getenv('GOOGLE_API_KEYS', '').split(',')
+google_api_keys = [key.strip() for key in google_api_keys if key.strip()]
+if not google_api_keys:
+    raise ValueError("Tidak ada Google API Key yang ditemukan! Harap atur GOOGLE_API_KEYS di .env.")
 
 processed_message_ids = set()
+used_api_keys = set()
 last_generated_text = None
 cooldown_time = 86400
 
@@ -50,6 +53,15 @@ def log_message(message, level="INFO"):
     print(formatted_message)
     print(border)
 
+def get_random_api_key():
+    available_keys = [key for key in google_api_keys if key not in used_api_keys]
+    if not available_keys:
+        log_message("Semua API key terkena error 429. Menunggu 24 jam sebelum mencoba lagi...", "ERROR")
+        time.sleep(cooldown_time)
+        used_api_keys.clear()
+        return get_random_api_key()
+    return random.choice(available_keys)
+
 def get_random_message_from_file():
     try:
         with open("pesan.txt", "r", encoding="utf-8") as file:
@@ -67,44 +79,35 @@ def generate_language_specific_prompt(user_message, prompt_language):
         log_message(f"Bahasa prompt '{prompt_language}' tidak valid. Pesan dilewati.", "WARNING")
         return None
 
-def generate_reply(prompt, prompt_language, use_deepseek=True):
+def generate_reply(prompt, prompt_language, use_google_ai=True):
     global last_generated_text
-    if use_deepseek:
+    if use_google_ai:
+        google_api_key = get_random_api_key()
         lang_prompt = generate_language_specific_prompt(prompt, prompt_language)
         if lang_prompt is None:
             return None
-        ai_prompt = f"{lang_prompt}\n\nBuatlah menjadi 1 kalimat menggunakan bahasa sehari-hari manusia."
-        
-        headers = {
-            "Authorization": f"Bearer {deepseek_api_key}",
-            "Content-Type": "application/json"
-        }
-        payload = {
-            "model": "deepseek-chat",
-            "messages": [{"role": "user", "content": ai_prompt}],
-            "temperature": 0.7,
-            "max_tokens": 150
-        }
-        
-        try:
-            response = requests.post(
-                "https://api.deepseek.com/v1/chat/completions",
-                headers=headers,
-                json=payload
-            )
-            response.raise_for_status()
-            result = response.json()
-            generated_text = result["choices"][0]["message"]["content"]
-            
-            if generated_text == last_generated_text:
-                log_message("AI menghasilkan teks yang sama, meminta teks baru...", "WAIT")
-                return generate_reply(prompt, prompt_language, use_deepseek)
-            
-            last_generated_text = generated_text
-            return generated_text
-        except requests.exceptions.RequestException as e:
-            log_message(f"Gagal memanggil DeepSeek API: {e}", "ERROR")
-            return None
+        ai_prompt = f"{lang_prompt}\n\nBuatlah menjadi 1 kalimat menggunakan bahasa sehari hari manusia."
+        url = f'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key={google_api_key}'
+        headers = {'Content-Type': 'application/json'}
+        data = {'contents': [{'parts': [{'text': ai_prompt}]}]}
+        while True:
+            try:
+                response = requests.post(url, headers=headers, json=data)
+                if response.status_code == 429:
+                    log_message(f"API key {google_api_key} terkena rate limit (429). Menggunakan API key lain...", "WARNING")
+                    used_api_keys.add(google_api_key)
+                    return generate_reply(prompt, prompt_language, use_google_ai)
+                response.raise_for_status()
+                result = response.json()
+                generated_text = result['candidates'][0]['content']['parts'][0]['text']
+                if generated_text == last_generated_text:
+                    log_message("AI menghasilkan teks yang sama, meminta teks baru...", "WAIT")
+                    continue
+                last_generated_text = generated_text
+                return generated_text
+            except requests.exceptions.RequestException as e:
+                log_message(f"Request failed: {e}", "ERROR")
+                time.sleep(2)
     else:
         return get_random_message_from_file()
 
@@ -145,7 +148,7 @@ def get_bot_info(token):
 
 def auto_reply(channel_id, settings, token):
     headers = {'Authorization': token}
-    if settings["use_deepseek"]:
+    if settings["use_google_ai"]:
         try:
             bot_info_response = requests.get('https://discord.com/api/v9/users/@me', headers=headers)
             bot_info_response.raise_for_status()
@@ -189,7 +192,7 @@ def auto_reply(channel_id, settings, token):
                 prompt = None
 
             if prompt:
-                result = generate_reply(prompt, settings["prompt_language"], settings["use_deepseek"])
+                result = generate_reply(prompt, settings["prompt_language"], settings["use_google_ai"])
                 if result is None:
                     log_message(f"[Channel {channel_id}] Bahasa prompt tidak valid. Pesan dilewati.", "WARNING")
                 else:
@@ -213,7 +216,7 @@ def auto_reply(channel_id, settings, token):
             delay = settings["delay_interval"]
             log_message(f"[Channel {channel_id}] Menunggu {delay} detik sebelum mengirim pesan dari file...", "WAIT")
             time.sleep(delay)
-            message_text = generate_reply("", settings["prompt_language"], use_deepseek=False)
+            message_text = generate_reply("", settings["prompt_language"], use_google_ai=False)
             if settings["use_reply"]:
                 send_message(channel_id, message_text, token, delete_after=settings["delete_bot_reply"], delete_immediately=settings["delete_immediately"])
             else:
@@ -278,9 +281,9 @@ def get_slow_mode_delay(channel_id, token):
 
 def get_server_settings(channel_id, channel_name):
     print(f"\nMasukkan pengaturan untuk channel {channel_id} (Nama Channel: {channel_name}):")
-    use_deepseek = input("  Gunakan DeepSeek AI? (y/n): ").strip().lower() == 'y'
+    use_google_ai = input("  Gunakan Google Gemini AI? (y/n): ").strip().lower() == 'y'
     
-    if use_deepseek:
+    if use_google_ai:
         prompt_language = input("  Pilih bahasa prompt (en/id): ").strip().lower()
         if prompt_language not in ["en", "id"]:
             print("  Input tidak valid. Default ke 'id'.")
@@ -310,7 +313,7 @@ def get_server_settings(channel_id, channel_name):
 
     return {
         "prompt_language": prompt_language,
-        "use_deepseek": use_deepseek,
+        "use_google_ai": use_google_ai,
         "enable_read_message": enable_read_message,
         "read_delay": read_delay,
         "delay_interval": delay_interval,
@@ -321,12 +324,14 @@ def get_server_settings(channel_id, channel_name):
     }
 
 if __name__ == "__main__":
+
     bot_accounts = {}
     for token in discord_tokens:
         username, discriminator, bot_id = get_bot_info(token)
         bot_accounts[token] = {"username": username, "discriminator": discriminator, "bot_id": bot_id}
         log_message(f"Akun Bot: {username}#{discriminator} (ID: {bot_id})", "SUCCESS")
 
+    # Input channel IDs dari user
     channel_ids = [cid.strip() for cid in input("Masukkan ID channel (pisahkan dengan koma jika lebih dari satu): ").split(",") if cid.strip()]
 
     token = discord_tokens[0]
@@ -347,7 +352,7 @@ if __name__ == "__main__":
                      (f"Dalam {settings['delete_bot_reply']} detik" if settings['delete_bot_reply'] and settings['delete_bot_reply'] > 0 else "Tidak"))
         log_message(
             f"[Channel {cid} | Server: {info['server_name']} | Channel: {info['channel_name']}] "
-            f"Pengaturan: DeepSeek AI = {'Aktif' if settings['use_deepseek'] else 'Tidak'}, "
+            f"Pengaturan: Gemini AI = {'Aktif' if settings['use_google_ai'] else 'Tidak'}, "
             f"Bahasa = {settings['prompt_language'].upper()}, "
             f"Membaca Pesan = {'Aktif' if settings['enable_read_message'] else 'Tidak'}, "
             f"Delay Membaca = {settings['read_delay']} detik, "
