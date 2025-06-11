@@ -361,6 +361,20 @@ if __name__ == "__main__":
             "INFO"
         )
 
-    token_index = 0
+      token_index = 0
     for channel_id in channel_ids:
-        token = discord_tokens[token_index %
+        token = discord_tokens[token_index % len(discord_tokens)]
+        token_index += 1
+        bot_info = bot_accounts.get(token, {"username": "Unknown", "discriminator": "", "bot_id": "Unknown"})
+        thread = threading.Thread(
+            target=auto_reply,
+            args=(channel_id, server_settings[channel_id], token)
+        )
+        thread.daemon = True
+        thread.start()
+        log_message(f"[Channel {channel_id}] Bot aktif: {bot_info['username']}#{bot_info['discriminator']} (Token: {token[:4]}{'...' if len(token) > 4 else token})", "SUCCESS")
+
+    log_message("Bot sedang berjalan di beberapa server... Tekan CTRL+C untuk menghentikan.", "INFO")
+    while True:
+        time.sleep(10)
+
