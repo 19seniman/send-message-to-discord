@@ -24,7 +24,6 @@ cd send-message-to-discord
 python3 -m venv send-message-to-discord
 source send-message-to-discord/bin/activate
 pip3 install -r requirements.txt
-pip3 install shareithub
 ```
 Edit file `.env` copy & paste your Gemini API & Discord token :
 ```
