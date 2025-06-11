@@ -361,7 +361,7 @@ if __name__ == "__main__":
             "INFO"
         )
 
-      token_index = 0
+        token_index = 0
     for channel_id in channel_ids:
         token = discord_tokens[token_index % len(discord_tokens)]
         token_index += 1
