@@ -1,16 +1,3 @@
-**Menghapus Modul `shareithub` dari Script**
-
-Untuk menghapus modul `shareithub` dari script yang Anda berikan, Anda perlu melakukan beberapa perubahan. Berikut adalah langkah-langkah yang perlu diambil:
-
-1. **Hapus Import `shareithub`**  
-   Hapus baris yang mengimpor modul `shareithub`.
-
-2. **Hapus Penggunaan `shareithub`**  
-   Pastikan tidak ada referensi atau penggunaan dari `shareithub` di dalam kode.
-
-Berikut adalah versi yang telah dimodifikasi dari script Anda tanpa modul `shareithub`:
-
-```python
 import json
 import threading
 import time
