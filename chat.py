@@ -1,3 +1,16 @@
+**Menghapus Modul `shareithub` dari Script**
+
+Untuk menghapus modul `shareithub` dari script yang Anda berikan, Anda perlu melakukan beberapa perubahan. Berikut adalah langkah-langkah yang perlu diambil:
+
+1. **Hapus Import `shareithub`**  
+   Hapus baris yang mengimpor modul `shareithub`.
+
+2. **Hapus Penggunaan `shareithub`**  
+   Pastikan tidak ada referensi atau penggunaan dari `shareithub` di dalam kode.
+
+Berikut adalah versi yang telah dimodifikasi dari script Anda tanpa modul `shareithub`:
+
+```python
 import json
 import threading
 import time
@@ -21,11 +34,13 @@ else:
         raise ValueError("Tidak ada Discord token yang ditemukan! Harap atur DISCORD_TOKENS atau DISCORD_TOKEN di .env.")
     discord_tokens = [discord_token]
 
-kimi_api_key = os.getenv('KIMI_API_KEY')
-if not kimi_api_key:
-    raise ValueError("Tidak ada Kimi AI API Key yang ditemukan! Harap atur KIMI_API_KEY di .env.")
+google_api_keys = os.getenv('GOOGLE_API_KEYS', '').split(',')
+google_api_keys = [key.strip() for key in google_api_keys if key.strip()]
+if not google_api_keys:
+    raise ValueError("Tidak ada Google API Key yang ditemukan! Harap atur GOOGLE_API_KEYS di .env.")
 
 processed_message_ids = set()
+used_api_keys = set()
 last_generated_text = None
 cooldown_time = 86400
 
@@ -49,47 +64,14 @@ def log_message(message, level="INFO"):
     print(formatted_message)
     print(border)
 
+def get_random_api_key():
+    available_keys = [key for key in google_api_keys if key not in used_api_keys]
+    if not available_keys:
+        log_message("Semua API key terkena error 429. Menunggu 24 jam sebelum mencoba lagi...", "ERROR")
+        time.sleep(cooldown_time)
+        used_api_keys.clear()
+        return get_random_api_key()
+    return random.choice(available_keys)
+
 def get_random_message_from_file():
-    try:
-        with open("pesan.txt", "r", encoding="utf-8") as file:
-            messages = [line.strip() for line in file.readlines() if line.strip()]
-            return random.choice(messages) if messages else "Tidak ada pesan tersedia di file."
-    except FileNotFoundError:
-        return "File pesan.txt tidak ditemukan!"
-
-def generate_language_specific_prompt(user_message, prompt_language):
-    if prompt_language == 'id':
-        return f"Balas pesan berikut dalam bahasa Indonesia: {user_message}"
-    elif prompt_language == 'en':
-        return f"Reply to the following message in English: {user_message}"
-    else:
-        log_message(f"Bahasa prompt '{prompt_language}' tidak valid. Pesan dilewati.", "WARNING")
-        return None
-
-def generate_reply(prompt, prompt_language, use_kimi_ai=True):
-    global last_generated_text
-    if use_kimi_ai:
-        lang_prompt = generate_language_specific_prompt(prompt, prompt_language)
-        if lang_prompt is None:
-            return None
-        ai_prompt = f"{lang_prompt}\n\nBuatlah menjadi 1 kalimat menggunakan bahasa sehari hari manusia."
-        url = "https://api.kimi.ai/v1/generate"  # Replace with the actual Kimi AI endpoint
-        headers = {'Authorization': f'Bearer {kimi_api_key}', 'Content-Type': 'application/json'}
-        data = {'prompt': ai_prompt}
-        try:
-            response = requests.post(url, headers=headers, json=data)
-            response.raise_for_status()
-            result = response.json()
-            generated_text = result['text']
-            if generated_text == last_generated_text:
-                log_message("AI menghasilkan teks yang sama, meminta teks baru...", "WAIT")
-                return generate_reply(prompt, prompt_language, use_kimi_ai)
-            last_generated_text = generated_text
-            return generated_text
-        except requests.exceptions.RequestException as e:
-            log_message(f"Request failed: {e}", "ERROR")
-            return None
-    else:
-        return get_random_message_from_file()
-
-# The rest of the script remains the same, except for any references to Google API keys.
+    try
