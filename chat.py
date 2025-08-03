@@ -14,9 +14,7 @@ from colorama import init, Fore, Style
 init(autoreset=True)
 load_dotenv()
 
-# --- NEW LOGGER IMPLEMENTATION ---
 
-# Define colors for the logger
 colors = {
     "cyan": Fore.CYAN,
     "yellow": Fore.YELLOW,
@@ -30,7 +28,6 @@ colors = {
     "reset": Style.RESET_ALL
 }
 
-# Logger object with different logging levels and styles
 logger = {
     "info": lambda msg: print(f"{colors['cyan']}[i] {msg}{colors['reset']}"),
     "warn": lambda msg: print(f"{colors['yellow']}[!] {msg}{colors['reset']}"),
@@ -359,3 +356,4 @@ if __name__ == "__main__":
             time.sleep(1)
     except KeyboardInterrupt:
         logger['warn']("\nMenutup bot... Selamat tinggal!")
+
