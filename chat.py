@@ -89,12 +89,10 @@ def get_random_api_key():
 
 def get_random_message_from_file():
     try:
-        # Mengubah nama file dari "pesan.txt" menjadi "tersuratkan.txt"
         with open("tersuratkan.txt", "r", encoding="utf-8") as file:
             messages = [line.strip() for line in file.readlines() if line.strip()]
             return random.choice(messages) if messages else "Tidak ada pesan tersedia di file."
     except FileNotFoundError:
-        # Menyesuaikan pesan error
         return "File tersuratkan.txt tidak ditemukan!"
 
 def generate_language_specific_prompt(user_message, prompt_language):
@@ -221,7 +219,7 @@ def auto_reply(channel_id, settings, token):
         else:
             # Logic for sending messages from file
             delay = settings["delay_interval"]
-            logger['loading'](f"[Channel {channel_id}] Menunggu {delay} detik sebelum mengirim pesan dari file...")
+            logger['loading'](f"[Channel {channel_id}] Menunggu {delay} detik (24 Jam) sebelum mengirim pesan dari file...")
             time.sleep(delay)
             message_text = generate_reply("", settings["prompt_language"], use_google_ai=False)
             send_message(channel_id, message_text, token, delete_after=settings["delete_bot_reply"], delete_immediately=settings["delete_immediately"])
@@ -274,9 +272,12 @@ def get_server_settings(channel_id, channel_name):
         read_delay = int(input(f"{colors['blue']}[>] Masukkan delay membaca pesan (detik): {colors['reset']}"))
         delay_interval = int(input(f"{colors['blue']}[>] Masukkan interval iterasi auto reply (detik): {colors['reset']}"))
     else:
-        prompt_language = "id" # Not relevant but needed for structure
+        # ## PERUBAHAN DI SINI ##
+        # Otomatis mengatur delay ke 24 jam (86400 detik) jika tidak menggunakan AI
+        prompt_language = "id" 
         read_delay = 0
-        delay_interval = int(input(f"{colors['blue']}[>] Masukkan delay kirim pesan dari file (detik): {colors['reset']}"))
+        delay_interval = 86400 
+        logger['info']("Mode 'Kirim dari File' dipilih. Delay pengiriman diatur ke 24 jam (86400 detik).")
 
     use_reply = input(f"{colors['blue']}[>] Kirim pesan sebagai reply? (y/n): {colors['reset']}").strip().lower() == 'y'
     hapus_balasan = input(f"{colors['blue']}[>] Hapus balasan bot? (y/n): {colors['reset']}").strip().lower() == 'y'
@@ -338,10 +339,16 @@ if __name__ == "__main__":
         current_token = token_cycle[i % len(token_cycle)]
         bot_info = bot_accounts[current_token]
 
+        # ## PERUBAHAN DI SINI ##
+        # Menampilkan "24 jam" jika modenya adalah kirim dari file
+        interval_display = f"{settings['delay_interval']} detik"
+        if not settings['use_google_ai'] and settings['delay_interval'] == 86400:
+            interval_display = "24 jam"
+
         summary_msg = (
             f"Channel: {info['channel_name']} ({cid}) | Bot: {bot_info['username']}\n"
             f"  Mode: {'Gemini AI' if settings['use_google_ai'] else 'Kirim dari File'}\n"
-            f"  Interval: {settings['delay_interval']} detik\n"
+            f"  Interval: {interval_display}\n"
             f"  Reply: {'Ya' if settings['use_reply'] else 'Tidak'}\n"
             f"  Hapus Pesan: {'Ya' if settings['delete_bot_reply'] is not None else 'Tidak'}"
         )
