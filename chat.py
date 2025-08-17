@@ -89,11 +89,13 @@ def get_random_api_key():
 
 def get_random_message_from_file():
     try:
-        with open("pesan.txt", "r", encoding="utf-8") as file:
+        # Mengubah nama file dari "pesan.txt" menjadi "tersuratkan.txt"
+        with open("tersuratkan.txt", "r", encoding="utf-8") as file:
             messages = [line.strip() for line in file.readlines() if line.strip()]
             return random.choice(messages) if messages else "Tidak ada pesan tersedia di file."
     except FileNotFoundError:
-        return "File pesan.txt tidak ditemukan!"
+        # Menyesuaikan pesan error
+        return "File tersuratkan.txt tidak ditemukan!"
 
 def generate_language_specific_prompt(user_message, prompt_language):
     if prompt_language == 'id':
@@ -356,4 +358,3 @@ if __name__ == "__main__":
             time.sleep(1)
     except KeyboardInterrupt:
         logger['warn']("\nMenutup bot... Selamat tinggal!")
-
