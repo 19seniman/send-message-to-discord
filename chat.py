@@ -217,12 +217,17 @@ def auto_reply(channel_id, settings, token):
             time.sleep(settings["delay_interval"])
 
         else:
-            # Logic for sending messages from file
-            delay = settings["delay_interval"]
-            logger['loading'](f"[Channel {channel_id}] Menunggu {delay} detik (24 Jam) sebelum mengirim pesan dari file...")
-            time.sleep(delay)
+            # ## PERUBAHAN DI SINI ##
+            # Logic for sending messages from file: Send first, then wait.
+            
+            # 1. Kirim pesan dari file
             message_text = generate_reply("", settings["prompt_language"], use_google_ai=False)
             send_message(channel_id, message_text, token, delete_after=settings["delete_bot_reply"], delete_immediately=settings["delete_immediately"])
+
+            # 2. Tunggu selama 24 jam sebelum loop berikutnya
+            delay = settings["delay_interval"]
+            logger['loading'](f"[Channel {channel_id}] Pesan berikutnya akan dikirim dalam 24 jam ({delay} detik)...")
+            time.sleep(delay)
 
 def send_message(channel_id, message_text, token, reply_to=None, delete_after=None, delete_immediately=False):
     headers = {'Authorization': token, 'Content-Type': 'application/json'}
@@ -272,12 +277,11 @@ def get_server_settings(channel_id, channel_name):
         read_delay = int(input(f"{colors['blue']}[>] Masukkan delay membaca pesan (detik): {colors['reset']}"))
         delay_interval = int(input(f"{colors['blue']}[>] Masukkan interval iterasi auto reply (detik): {colors['reset']}"))
     else:
-        # ## PERUBAHAN DI SINI ##
-        # Otomatis mengatur delay ke 24 jam (86400 detik) jika tidak menggunakan AI
+        # Otomatis mengatur interval ke 24 jam (86400 detik) jika tidak menggunakan AI
         prompt_language = "id" 
         read_delay = 0
         delay_interval = 86400 
-        logger['info']("Mode 'Kirim dari File' dipilih. Delay pengiriman diatur ke 24 jam (86400 detik).")
+        logger['info']("Mode 'Kirim dari File' dipilih. Interval pengiriman diatur ke 24 jam (86400 detik).")
 
     use_reply = input(f"{colors['blue']}[>] Kirim pesan sebagai reply? (y/n): {colors['reset']}").strip().lower() == 'y'
     hapus_balasan = input(f"{colors['blue']}[>] Hapus balasan bot? (y/n): {colors['reset']}").strip().lower() == 'y'
@@ -339,7 +343,6 @@ if __name__ == "__main__":
         current_token = token_cycle[i % len(token_cycle)]
         bot_info = bot_accounts[current_token]
 
-        # ## PERUBAHAN DI SINI ##
         # Menampilkan "24 jam" jika modenya adalah kirim dari file
         interval_display = f"{settings['delay_interval']} detik"
         if not settings['use_google_ai'] and settings['delay_interval'] == 86400:
