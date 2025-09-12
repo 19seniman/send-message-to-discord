@@ -179,7 +179,7 @@ def auto_reply(channel_id, settings, token, bot_user_id):
         try:
             if settings["use_google_ai"]:
                 # Logic for AI replies
-                logger['loading'](f"[Channel {channel_id}] Menunggu {settings['read_delay']} detik sebelum membaca pesan...")
+                logger['loading'](f"[{bot_user_id[-4:]}][Channel {channel_id}] Menunggu {settings['read_delay']} detik...")
                 time.sleep(settings["read_delay"])
                 prompt = None
                 reply_to_id = None
@@ -195,38 +195,38 @@ def auto_reply(channel_id, settings, token, bot_user_id):
                         if author_id != bot_user_id and message_id not in processed_message_ids:
                             user_message = most_recent_message.get('content', '').strip()
                             if user_message and not most_recent_message.get('attachments'):
-                                logger['info'](f"[Channel {channel_id}] Received: {user_message}")
+                                logger['info'](f"[{bot_user_id[-4:]}][Channel {channel_id}] Received: {user_message}")
                                 prompt = user_message
                                 reply_to_id = message_id
                                 processed_message_ids.add(message_id)
                             else:
-                                logger['info'](f"[Channel {channel_id}] Pesan terakhir bukan teks murni atau berisi lampiran, dilewati.")
+                                logger['info'](f"[{bot_user_id[-4:]}][Channel {channel_id}] Pesan terakhir bukan teks, dilewati.")
                 except requests.exceptions.RequestException as e:
-                    logger['error'](f"[Channel {channel_id}] Request error: {e}")
+                    logger['error'](f"[{bot_user_id[-4:]}][Channel {channel_id}] Request error: {e}")
                 
                 if prompt:
                     result = generate_reply(prompt, settings["prompt_language"], settings["use_google_ai"])
                     if result:
-                        send_message(channel_id, result, token, reply_to=reply_to_id if settings["use_reply"] else None, delete_after=settings["delete_bot_reply"], delete_immediately=settings["delete_immediately"])
+                        send_message(channel_id, result, token, bot_user_id, reply_to=reply_to_id if settings["use_reply"] else None, delete_after=settings["delete_bot_reply"], delete_immediately=settings["delete_immediately"])
                 else:
-                    logger['info'](f"[Channel {channel_id}] Tidak ada pesan baru yang valid untuk dibalas.")
+                    logger['info'](f"[{bot_user_id[-4:]}][Channel {channel_id}] Tidak ada pesan baru.")
                 
-                logger['loading'](f"[Channel {channel_id}] Menunggu {settings['delay_interval']} detik sebelum iterasi berikutnya...")
+                logger['loading'](f"[{bot_user_id[-4:]}][Channel {channel_id}] Menunggu iterasi berikutnya {settings['delay_interval']} detik...")
                 time.sleep(settings["delay_interval"])
 
             else:
-                # Logic for sending messages from file: Send first, then wait.
+                # Logic for sending messages from file
                 message_text = generate_reply("", settings["prompt_language"], use_google_ai=False)
-                send_message(channel_id, message_text, token, delete_after=settings["delete_bot_reply"], delete_immediately=settings["delete_immediately"])
+                send_message(channel_id, message_text, token, bot_user_id, delete_after=settings["delete_bot_reply"], delete_immediately=settings["delete_immediately"])
 
                 delay = settings["delay_interval"]
-                logger['loading'](f"[Channel {channel_id}] Pesan berikutnya akan dikirim dalam 24 jam ({delay} detik)...")
+                logger['loading'](f"[{bot_user_id[-4:]}][Channel {channel_id}] Pesan berikutnya dalam 24 jam...")
                 time.sleep(delay)
         except Exception as e:
-            logger['error'](f"[Thread {channel_id}] Terjadi error: {e}. Thread akan restart dalam 10 detik.")
+            logger['error'](f"[{bot_user_id[-4:]}][Thread {channel_id}] Terjadi error: {e}. Restart dalam 10 detik.")
             time.sleep(10)
 
-def send_message(channel_id, message_text, token, reply_to=None, delete_after=None, delete_immediately=False):
+def send_message(channel_id, message_text, token, bot_user_id, reply_to=None, delete_after=None, delete_immediately=False):
     headers = {'Authorization': token, 'Content-Type': 'application/json'}
     payload = {'content': message_text}
     if reply_to:
@@ -237,33 +237,31 @@ def send_message(channel_id, message_text, token, reply_to=None, delete_after=No
         response.raise_for_status()
         data = response.json()
         message_id = data.get("id")
-        logger['success'](f"[Channel {channel_id}] Pesan terkirim: \"{message_text}\" (ID: {message_id})")
+        logger['success'](f"[{bot_user_id[-4:]}][Channel {channel_id}] Pesan terkirim: \"{message_text}\"")
         
         if delete_after is not None and delete_after >= 0:
             if delete_immediately:
-                logger['loading'](f"[Channel {channel_id}] Menghapus pesan segera...")
-                threading.Thread(target=delete_message, args=(channel_id, message_id, token), daemon=True).start()
+                threading.Thread(target=delete_message, args=(channel_id, message_id, token, bot_user_id), daemon=True).start()
             elif delete_after > 0:
-                logger['loading'](f"[Channel {channel_id}] Pesan akan dihapus dalam {delete_after} detik...")
-                threading.Thread(target=delayed_delete, args=(channel_id, message_id, delete_after, token), daemon=True).start()
+                threading.Thread(target=delayed_delete, args=(channel_id, message_id, delete_after, token, bot_user_id), daemon=True).start()
     except requests.exceptions.RequestException as e:
-        logger['error'](f"[Channel {channel_id}] Kesalahan saat mengirim pesan: {e}")
+        logger['error'](f"[{bot_user_id[-4:]}][Channel {channel_id}] Gagal mengirim pesan: {e}")
 
-def delayed_delete(channel_id, message_id, delay, token):
+def delayed_delete(channel_id, message_id, delay, token, bot_user_id):
     time.sleep(delay)
-    delete_message(channel_id, message_id, token)
+    delete_message(channel_id, message_id, token, bot_user_id)
 
-def delete_message(channel_id, message_id, token):
+def delete_message(channel_id, message_id, token, bot_user_id):
     headers = {'Authorization': token}
     url = f'https://discord.com/api/v9/channels/{channel_id}/messages/{message_id}'
     try:
         response = requests.delete(url, headers=headers)
         if response.status_code == 204:
-            logger['success'](f"[Channel {channel_id}] Pesan dengan ID {message_id} berhasil dihapus.")
+            logger['success'](f"[{bot_user_id[-4:]}][Channel {channel_id}] Pesan {message_id} berhasil dihapus.")
         else:
-            logger['error'](f"[Channel {channel_id}] Gagal menghapus pesan. Status: {response.status_code} - {response.text}")
+            logger['error'](f"[{bot_user_id[-4:]}][Channel {channel_id}] Gagal hapus pesan. Status: {response.status_code}")
     except requests.exceptions.RequestException as e:
-        logger['error'](f"[Channel {channel_id}] Kesalahan saat menghapus pesan: {e}")
+        logger['error'](f"[{bot_user_id[-4:]}][Channel {channel_id}] Gagal hapus pesan: {e}")
 
 def get_channel_settings(channel_id, channel_name):
     logger['section'](f"Pengaturan untuk Channel: {channel_name} ({channel_id})")
@@ -274,11 +272,10 @@ def get_channel_settings(channel_id, channel_name):
         read_delay = int(input(f"{colors['blue']}[?] Masukkan delay membaca pesan (detik): {colors['reset']}"))
         delay_interval = int(input(f"{colors['blue']}[?] Masukkan interval iterasi auto reply (detik): {colors['reset']}"))
     else:
-        # Otomatis mengatur interval ke 24 jam (86400 detik) jika tidak menggunakan AI
         prompt_language = "id"  
         read_delay = 0
         delay_interval = 86400 
-        logger['info']("Mode 'Kirim dari File' dipilih. Interval pengiriman diatur ke 24 jam (86400 detik).")
+        logger['info']("Mode 'Kirim dari File' dipilih. Interval diatur ke 24 jam.")
 
     use_reply = input(f"{colors['blue']}[?] Kirim pesan sebagai reply? (y/n): {colors['reset']}").strip().lower() == 'y'
     hapus_balasan = input(f"{colors['blue']}[?] Hapus balasan bot setelah dikirim? (y/n): {colors['reset']}").strip().lower() == 'y'
@@ -323,49 +320,55 @@ if __name__ == "__main__":
     # --- LOGIKA BARU: Pemilihan Akun & Pengaturan ---
     configs = []
     
-    # Tampilkan daftar akun yang valid
     print("\n" + f"{colors['bold']}Akun yang tersedia:{colors['reset']}")
     for i, acc in enumerate(valid_accounts):
         print(f"  {colors['yellow']}[{i+1}] {acc['username']}{colors['reset']}")
 
-    # Pilih mode penugasan akun
-    use_different_accounts = input(f"\n{colors['blue']}[?] Apakah Anda ingin menggunakan akun yang berbeda untuk setiap channel? (y/n): {colors['reset']}").strip().lower() == 'y'
+    use_different_accounts = input(f"\n{colors['blue']}[?] Gunakan akun berbeda untuk tiap channel? (y/n): {colors['reset']}").strip().lower() == 'y'
     
-    default_account = None
+    default_account_indices = []
     if not use_different_accounts:
-        choice = int(input(f"{colors['blue']}[?] Pilih satu akun untuk digunakan di semua channel (masukkan nomor): {colors['reset']}")) - 1
-        default_account = valid_accounts[choice]
+        choices_input = input(f"{colors['blue']}[?] Pilih akun untuk semua channel (bisa lebih dari satu, pisahkan dgn koma/spasi): {colors['reset']}")
+        default_account_indices = [int(num.strip()) - 1 for num in choices_input.replace(',', ' ').split() if num.strip().isdigit()]
 
-    # Pilih mode pengaturan
-    use_same_settings = input(f"{colors['blue']}[?] Apakah Anda ingin menggunakan pengaturan yang sama untuk semua channel? (y/n): {colors['reset']}").strip().lower() == 'y'
+    use_same_settings = input(f"{colors['blue']}[?] Gunakan pengaturan yang sama untuk semua channel? (y/n): {colors['reset']}").strip().lower() == 'y'
     
     default_settings = None
     if use_same_settings:
-        # Ambil info channel pertama untuk display nama saat konfigurasi
-        temp_token = default_account['token'] if default_account else valid_accounts[0]['token']
+        temp_token = valid_accounts[0]['token']
         _, temp_channel_name = get_channel_info(channel_ids[0], temp_token)
         default_settings = get_channel_settings(channel_ids[0], f"{temp_channel_name} (sebagai template)")
 
-    # Buat konfigurasi untuk setiap channel
     for cid in channel_ids:
-        account_to_use = default_account
+        account_indices_to_use = default_account_indices
         if use_different_accounts:
-            choice = int(input(f"\n{colors['blue']}[?] Pilih akun untuk Channel ID {cid} (masukkan nomor): {colors['reset']}")) - 1
-            account_to_use = valid_accounts[choice]
+            # ## PERUBAHAN DI SINI: Input bisa menerima banyak nomor ##
+            choices_input = input(f"\n{colors['blue']}[?] Pilih akun untuk Channel ID {cid} (bisa lebih dari satu, pisahkan dgn koma/spasi): {colors['reset']}")
+            account_indices_to_use = [int(num.strip()) - 1 for num in choices_input.replace(',', ' ').split() if num.strip().isdigit()]
 
-        server_name, channel_name = get_channel_info(cid, account_to_use['token'])
+        # Ambil info channel & settings sekali saja per channel
+        # Gunakan token pertama yang valid untuk mengambil info, asumsi bot ada di server
+        first_valid_index = account_indices_to_use[0]
+        server_name, channel_name = get_channel_info(cid, valid_accounts[first_valid_index]['token'])
         logger['info'](f"Info Channel: ID={cid}, Server='{server_name}', Channel='{channel_name}'")
 
         settings_to_use = default_settings
         if not use_same_settings:
             settings_to_use = get_channel_settings(cid, channel_name)
         
-        configs.append({
-            "channel_id": cid,
-            "channel_name": channel_name,
-            "account": account_to_use,
-            "settings": settings_to_use
-        })
+        # ## PERUBAHAN DI SINI: Membuat config untuk setiap akun yang dipilih ##
+        for index in account_indices_to_use:
+            if 0 <= index < len(valid_accounts):
+                account_to_use = valid_accounts[index]
+                configs.append({
+                    "channel_id": cid,
+                    "channel_name": channel_name,
+                    "account": account_to_use,
+                    "settings": settings_to_use
+                })
+            else:
+                logger['warn'](f"Nomor akun '{index + 1}' tidak valid dan akan dilewati.")
+
 
     # --- Ringkasan & Memulai Bot ---
     logger['section']("Ringkasan Konfigurasi & Memulai Bot")
@@ -394,7 +397,7 @@ if __name__ == "__main__":
         )
         threads.append(thread)
         thread.start()
-        logger['success'](f"Thread untuk channel {config['channel_id']} telah dimulai dengan bot {account['username']}.")
+        logger['success'](f"Thread untuk [{account['username']}] di channel [{config['channel_name']}] telah dimulai.")
 
     logger['info']("\nSemua bot sedang berjalan... Tekan CTRL+C untuk menghentikan.")
     try:
