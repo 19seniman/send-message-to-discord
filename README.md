@@ -28,7 +28,7 @@ python3 chat.py
 
 ### get gemini apikey open your browser
 ```
-https://ai.google.dev/gemini-api/docs/api-key
+https://aistudio.google.com/app/apikey
 ```
 
 
