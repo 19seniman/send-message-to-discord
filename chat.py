@@ -10,10 +10,9 @@ from dotenv import load_dotenv
 from datetime import datetime
 from colorama import init, Fore, Style
 
-# Initialize colorama
+# Inisialisasi colorama
 init(autoreset=True)
 load_dotenv()
-
 
 colors = {
     "cyan": Fore.CYAN,
@@ -39,7 +38,7 @@ logger = {
     "summary": lambda msg: print(f"{colors['green']}{colors['bold']}[SUMMARY] {msg}{colors['reset']}"),
     "banner": lambda: print(
         f"\n{colors['blue']}{colors['bold']}╔═════════════════════════════════════════╗{colors['reset']}\n"
-        f"{colors['blue']}{colors['bold']}║     🍉 19Seniman From Insider    🍉     ║{colors['reset']}\n"
+        f"{colors['blue']}{colors['bold']}║      🍉 19Seniman From Insider    🍉       ║{colors['reset']}\n"
         f"{colors['blue']}{colors['bold']}╚═════════════════════════════════════════╝{colors['reset']}\n"
     ),
     "section": lambda msg: print(
@@ -274,7 +273,7 @@ def get_channel_settings(channel_id, channel_name):
     else:
         prompt_language = "id"  
         read_delay = 0
-        delay_interval = 86400 
+        delay_interval = 86400
         logger['info']("Mode 'Kirim dari File' dipilih. Interval diatur ke 24 jam.")
 
     use_reply = input(f"{colors['blue']}[?] Kirim pesan sebagai reply? (y/n): {colors['reset']}").strip().lower() == 'y'
@@ -343,6 +342,7 @@ if __name__ == "__main__":
         account_indices_to_use = default_account_indices
         if use_different_accounts:
             # ## PERUBAHAN DI SINI: Input bisa menerima banyak nomor ##
+            # Logic sudah benar di skrip Anda, saya hanya memastikan ini yang digunakan.
             choices_input = input(f"\n{colors['blue']}[?] Pilih akun untuk Channel ID {cid} (bisa lebih dari satu, pisahkan dgn koma/spasi): {colors['reset']}")
             account_indices_to_use = [int(num.strip()) - 1 for num in choices_input.replace(',', ' ').split() if num.strip().isdigit()]
 
