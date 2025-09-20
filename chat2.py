@@ -88,12 +88,10 @@ def get_random_message_from_file():
     Membaca pesan acak dari file pesan2.txt.
     """
     try:
-        # PERUBAHAN: Nama file diubah ke "pesan2.txt"
         with open("pesan2.txt", "r", encoding="utf-8") as file:
             messages = [line.strip() for line in file.readlines() if line.strip()]
             return random.choice(messages) if messages else "Tidak ada pesan tersedia di file."
     except FileNotFoundError:
-        # PERUBAHAN: Pesan error disesuaikan
         return "File pesan2.txt tidak ditemukan!"
 
 def generate_language_specific_prompt(user_message, prompt_language):
@@ -135,7 +133,6 @@ def generate_reply(prompt, prompt_language, use_google_ai=True):
                 logger['error'](f"Request failed: {e}")
                 time.sleep(2)
     else:
-        # Memanggil fungsi yang sudah diperbarui untuk membaca dari pesan2.txt
         return get_random_message_from_file()
 
 def get_channel_info(channel_id, token):
@@ -225,7 +222,8 @@ def auto_reply(channel_id, settings, token, bot_user_id):
                 send_message(channel_id, message_text, token, bot_user_id, delete_after=settings["delete_bot_reply"], delete_immediately=settings["delete_immediately"])
 
                 delay = settings["delay_interval"]
-                logger['loading'](f"[{bot_user_id[-4:]}][Channel {channel_id}] Pesan berikutnya dalam 24 jam...")
+                # PERUBAHAN: Pesan log disesuaikan menjadi 5 jam
+                logger['loading'](f"[{bot_user_id[-4:]}][Channel {channel_id}] Pesan berikutnya dalam 5 jam...")
                 time.sleep(delay)
         except Exception as e:
             logger['error'](f"[{bot_user_id[-4:]}][Thread {channel_id}] Terjadi error: {e}. Restart dalam 10 detik.")
@@ -279,8 +277,10 @@ def get_channel_settings(channel_id, channel_name):
     else:
         prompt_language = "id"  
         read_delay = 0
-        delay_interval = 86400
-        logger['info']("Mode 'Kirim dari File' dipilih. Interval diatur ke 24 jam.")
+        # PERUBAHAN: Interval diubah menjadi 5 jam (dalam detik)
+        delay_interval = 5 * 60 * 60
+        # PERUBAHAN: Pesan info disesuaikan menjadi 5 jam
+        logger['info']("Mode 'Kirim dari File' dipilih. Interval diatur ke 5 jam.")
 
     use_reply = input(f"{colors['blue']}[?] Kirim pesan sebagai reply? (y/n): {colors['reset']}").strip().lower() == 'y'
     hapus_balasan = input(f"{colors['blue']}[?] Hapus balasan bot setelah dikirim? (y/n): {colors['reset']}").strip().lower() == 'y'
@@ -300,24 +300,6 @@ def get_channel_settings(channel_id, channel_name):
     }
 
 if __name__ == "__main__":
-    # --- PERUBAHAN: Menambahkan penundaan 5 jam sebelum eksekusi ---
-    delay_duration = 5 * 60 * 60 # 5 jam dalam detik
-    logger['info'](f"Script akan dimulai dalam 5 jam. Tekan CTRL+C untuk membatalkan.")
-    try:
-        for i in range(delay_duration, 0, -1):
-            hours, remainder = divmod(i, 3600)
-            minutes, seconds = divmod(remainder, 60)
-            countdown_msg = f"Memulai dalam: {hours:02d}:{minutes:02d}:{seconds:02d}"
-            logger['countdown'](countdown_msg)
-            time.sleep(1)
-        # Menambahkan baris baru setelah countdown selesai agar tidak menimpa baris banner
-        sys.stdout.write("\n")
-        logger['success']("Waktu tunda selesai. Memulai script...")
-    except KeyboardInterrupt:
-        logger['warn']("\nCountdown dibatalkan. Menutup program.")
-        sys.exit(0)
-    # --- Akhir Perubahan ---
-
     logger['banner']()
     
     # --- Verifikasi Akun ---
@@ -398,8 +380,10 @@ if __name__ == "__main__":
         account = config['account']
         
         interval_display = f"{settings['delay_interval']} detik"
-        if not settings['use_google_ai'] and settings['delay_interval'] == 86400:
-            interval_display = "24 jam"
+        # PERUBAHAN: Tampilan ringkasan diubah agar lebih dinamis
+        if not settings['use_google_ai']:
+            hours = settings['delay_interval'] // 3600
+            interval_display = f"{hours} jam"
 
         summary_msg = (
             f"Channel: {config['channel_name']} ({config['channel_id']}) | Bot: {account['username']}\n"
