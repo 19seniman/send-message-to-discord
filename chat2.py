@@ -300,6 +300,24 @@ def get_channel_settings(channel_id, channel_name):
     }
 
 if __name__ == "__main__":
+    # --- PERUBAHAN: Menambahkan penundaan 5 jam sebelum eksekusi ---
+    delay_duration = 5 * 60 * 60 # 5 jam dalam detik
+    logger['info'](f"Script akan dimulai dalam 5 jam. Tekan CTRL+C untuk membatalkan.")
+    try:
+        for i in range(delay_duration, 0, -1):
+            hours, remainder = divmod(i, 3600)
+            minutes, seconds = divmod(remainder, 60)
+            countdown_msg = f"Memulai dalam: {hours:02d}:{minutes:02d}:{seconds:02d}"
+            logger['countdown'](countdown_msg)
+            time.sleep(1)
+        # Menambahkan baris baru setelah countdown selesai agar tidak menimpa baris banner
+        sys.stdout.write("\n")
+        logger['success']("Waktu tunda selesai. Memulai script...")
+    except KeyboardInterrupt:
+        logger['warn']("\nCountdown dibatalkan. Menutup program.")
+        sys.exit(0)
+    # --- Akhir Perubahan ---
+
     logger['banner']()
     
     # --- Verifikasi Akun ---
@@ -407,3 +425,4 @@ if __name__ == "__main__":
             time.sleep(1)
     except KeyboardInterrupt:
         logger['warn']("\nMenutup bot... Selamat tinggal!")
+
