@@ -38,7 +38,7 @@ logger = {
     "summary": lambda msg: print(f"{colors['green']}{colors['bold']}[SUMMARY] {msg}{colors['reset']}"),
     "banner": lambda: print(
         f"\n{colors['blue']}{colors['bold']}╔═════════════════════════════════════════╗{colors['reset']}\n"
-        f"{colors['blue']}{colors['bold']}║      🍉 19Seniman From Insider    🍉       ║{colors['reset']}\n"
+        f"{colors['blue']}{colors['bold']}║     🍉 19Seniman From Insider    🍉      ║{colors['reset']}\n"
         f"{colors['blue']}{colors['bold']}╚═════════════════════════════════════════╝{colors['reset']}\n"
     ),
     "section": lambda msg: print(
@@ -84,12 +84,17 @@ def get_random_api_key():
     return random.choice(available_keys)
 
 def get_random_message_from_file():
+    """
+    Membaca pesan acak dari file pesan2.txt.
+    """
     try:
-        with open("tersuratkan.txt", "r", encoding="utf-8") as file:
+        # PERUBAHAN: Nama file diubah ke "pesan2.txt"
+        with open("pesan2.txt", "r", encoding="utf-8") as file:
             messages = [line.strip() for line in file.readlines() if line.strip()]
             return random.choice(messages) if messages else "Tidak ada pesan tersedia di file."
     except FileNotFoundError:
-        return "File tersuratkan.txt tidak ditemukan!"
+        # PERUBAHAN: Pesan error disesuaikan
+        return "File pesan2.txt tidak ditemukan!"
 
 def generate_language_specific_prompt(user_message, prompt_language):
     if prompt_language == 'id':
@@ -130,6 +135,7 @@ def generate_reply(prompt, prompt_language, use_google_ai=True):
                 logger['error'](f"Request failed: {e}")
                 time.sleep(2)
     else:
+        # Memanggil fungsi yang sudah diperbarui untuk membaca dari pesan2.txt
         return get_random_message_from_file()
 
 def get_channel_info(channel_id, token):
@@ -341,13 +347,10 @@ if __name__ == "__main__":
     for cid in channel_ids:
         account_indices_to_use = default_account_indices
         if use_different_accounts:
-            # ## PERUBAHAN DI SINI: Input bisa menerima banyak nomor ##
-            # Logic sudah benar di skrip Anda, saya hanya memastikan ini yang digunakan.
             choices_input = input(f"\n{colors['blue']}[?] Pilih akun untuk Channel ID {cid} (bisa lebih dari satu, pisahkan dgn koma/spasi): {colors['reset']}")
             account_indices_to_use = [int(num.strip()) - 1 for num in choices_input.replace(',', ' ').split() if num.strip().isdigit()]
 
         # Ambil info channel & settings sekali saja per channel
-        # Gunakan token pertama yang valid untuk mengambil info, asumsi bot ada di server
         first_valid_index = account_indices_to_use[0]
         server_name, channel_name = get_channel_info(cid, valid_accounts[first_valid_index]['token'])
         logger['info'](f"Info Channel: ID={cid}, Server='{server_name}', Channel='{channel_name}'")
@@ -356,7 +359,6 @@ if __name__ == "__main__":
         if not use_same_settings:
             settings_to_use = get_channel_settings(cid, channel_name)
         
-        # ## PERUBAHAN DI SINI: Membuat config untuk setiap akun yang dipilih ##
         for index in account_indices_to_use:
             if 0 <= index < len(valid_accounts):
                 account_to_use = valid_accounts[index]
